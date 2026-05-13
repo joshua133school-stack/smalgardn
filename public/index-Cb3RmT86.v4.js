@@ -38458,7 +38458,11 @@ class tI {
     nt(this, "floraGrowth", 0);
     nt(this, "earthGrowth", 0);
     nt(this, "earthScrollScale", 1);
+    nt(this, "earthScrollTarget", 0);
+    nt(this, "earthScrollProgress", 0);
     nt(this, "earthOverlay", null);
+    nt(this, "earthHeadline", null);
+    nt(this, "earthBody", null);
     nt(this, "targetMode", "wheat");
     nt(this, "bladeTexture");
     nt(this, "maxInstances", 2.9e5);
@@ -38481,17 +38485,10 @@ class tI {
     });
     nt(this, "onWheel", (e) => {
       if (this.targetMode === "earth" && this.earthGrowth > 0.01) {
-        this.earthScrollScale = Math.max(
+        this.earthScrollTarget = Math.max(
           0,
-          Math.min(1, this.earthScrollScale - e.deltaY * 0.0015),
+          Math.min(1, this.earthScrollTarget + e.deltaY * 0.0007),
         );
-        if (this.earthOverlay) {
-          const _msg = "earth is a small garden";
-          const _t = 1 - this.earthScrollScale;
-          const _rv = Math.max(0, Math.min(1, (_t - 0.4) / 0.6));
-          const _n = Math.floor(_rv * _msg.length);
-          this.earthOverlay.textContent = _msg.slice(0, _n);
-        }
       }
     });
     nt(this, "onResize", () => {
@@ -38616,6 +38613,37 @@ class tI {
           if (this.floraCenterMesh)
             this.floraCenterMesh.rotation.x = -Math.min(headTilt, 1.5);
         }
+      }
+      // jelly-smooth lerp of scroll progress toward target
+      if (this.targetMode === "earth") {
+        this.earthScrollProgress +=
+          (this.earthScrollTarget - this.earthScrollProgress) * 0.12;
+      } else {
+        this.earthScrollProgress +=
+          (0 - this.earthScrollProgress) * 0.15;
+        this.earthScrollTarget = 0;
+      }
+      const _p = this.earthScrollProgress;
+      // earth shrinks during the first 45% of scroll
+      this.earthScrollScale = Math.max(0, 1 - _p / 0.45);
+      // headline reveal: 0.05 -> 0.40
+      if (this.earthHeadline) {
+        const _msg = "earth is a small garden";
+        const _hr = Math.max(0, Math.min(1, (_p - 0.05) / 0.35));
+        const _hn = Math.floor(_hr * _msg.length);
+        this.earthHeadline.textContent = _msg.slice(0, _hn);
+        this.earthHeadline.style.opacity = String(Math.min(1, _hr * 2));
+      }
+      // body reveal: 0.50 -> 0.95 (sustainable agriculture copy)
+      if (this.earthBody) {
+        const _body =
+          "Sustainable agriculture isn't a return to the past — it's how a small garden becomes the future. Compost. Rotate. Polyculture. Patience.";
+        const _br = Math.max(0, Math.min(1, (_p - 0.5) / 0.45));
+        const _bn = Math.floor(_br * _body.length);
+        this.earthBody.textContent = _body.slice(0, _bn);
+        const _bo = Math.min(1, _br * 3);
+        this.earthBody.style.opacity = String(_bo);
+        this.earthBody.style.transform = `translateY(${(1 - _bo) * 16}px)`;
       }
       if (this.earthMesh) {
         const eSmooth =
@@ -38753,28 +38781,51 @@ class tI {
       (() => {
         const _o = document.createElement("div");
         _o.id = "earth-small-garden-text";
-        _o.textContent = "";
         Object.assign(_o.style, {
           position: "fixed",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%,-50%)",
-          fontSize: "clamp(2rem,7vw,6rem)",
-          fontFamily: '"Google Sans", sans-serif',
-          fontWeight: "900",
-          color: "#4ade80",
-          letterSpacing: "0.01em",
-          opacity: "1",
+          inset: "0",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "28px",
+          padding: "24px",
           pointerEvents: "none",
           zIndex: "10",
+          textAlign: "center",
+          fontFamily: '"Google Sans", sans-serif',
+          color: "#4ade80",
+        });
+        const _h = document.createElement("div");
+        _h.id = "earth-headline";
+        Object.assign(_h.style, {
+          fontSize: "clamp(2rem,7vw,6rem)",
+          fontWeight: "900",
+          letterSpacing: "0.01em",
+          lineHeight: "1",
+          whiteSpace: "nowrap",
           textShadow:
             "0 4px 14px rgba(0,0,0,0.18), 0 0 18px rgba(74,222,128,0.35)",
-          whiteSpace: "nowrap",
-          textAlign: "center",
-          lineHeight: "1",
+          opacity: "0",
         });
+        const _b = document.createElement("div");
+        _b.id = "earth-body";
+        Object.assign(_b.style, {
+          fontSize: "clamp(1rem,2vw,1.5rem)",
+          fontWeight: "400",
+          lineHeight: "1.55",
+          maxWidth: "60ch",
+          opacity: "0",
+          transform: "translateY(16px)",
+          transition: "opacity 0.25s ease, transform 0.25s ease",
+          textShadow: "0 2px 8px rgba(0,0,0,0.18)",
+        });
+        _o.appendChild(_h);
+        _o.appendChild(_b);
         document.body.appendChild(_o);
         this.earthOverlay = _o;
+        this.earthHeadline = _h;
+        this.earthBody = _b;
       })(),
       this.animate());
   }
@@ -39452,8 +39503,16 @@ class tI {
     this.targetMode = e === "grass" ? "wheat" : e;
     this._delayStartTime = null;
     this.earthScrollScale = 1;
-    if (this.earthOverlay) {
-      this.earthOverlay.textContent = "";
+    this.earthScrollTarget = 0;
+    this.earthScrollProgress = 0;
+    if (this.earthHeadline) {
+      this.earthHeadline.textContent = "";
+      this.earthHeadline.style.opacity = "0";
+    }
+    if (this.earthBody) {
+      this.earthBody.textContent = "";
+      this.earthBody.style.opacity = "0";
+      this.earthBody.style.transform = "translateY(16px)";
     }
   }
   updateUniforms(e) {
@@ -39819,80 +39878,3 @@ const yi = {
 if (!pS) throw new Error("Could not find root element to mount to");
 const rI = Of.createRoot(pS);
 rI.render(ve.jsx(B.StrictMode, { children: ve.jsx(iI, {}) }));
-
-/* ── jelly smooth scroll for #settings-scroll ───────────────── */
-(function () {
-  function attach(el) {
-    if (!el || el.__jelly) return;
-    el.__jelly = true;
-    let target = el.scrollTop;
-    let current = el.scrollTop;
-    let raf = null;
-    let lastTouch = 0;
-    function loop() {
-      const diff = target - current;
-      if (Math.abs(diff) < 0.3) {
-        current = target;
-        el.scrollTop = current;
-        raf = null;
-        return;
-      }
-      // jelly: slow ease-out, slightly springy
-      current += diff * 0.14;
-      el.scrollTop = current;
-      raf = requestAnimationFrame(loop);
-    }
-    el.addEventListener(
-      "wheel",
-      function (e) {
-        const max = el.scrollHeight - el.clientHeight;
-        if (max <= 0) return;
-        const next = Math.max(0, Math.min(max, target + e.deltaY * 0.9));
-        if (next === target) return;
-        e.preventDefault();
-        e.stopPropagation();
-        target = next;
-        if (!raf) raf = requestAnimationFrame(loop);
-      },
-      { passive: false }
-    );
-    el.addEventListener("touchstart", function (e) {
-      lastTouch = e.touches[0].clientY;
-      target = el.scrollTop;
-      current = el.scrollTop;
-    }, { passive: true });
-    el.addEventListener(
-      "touchmove",
-      function (e) {
-        const y = e.touches[0].clientY;
-        const dy = lastTouch - y;
-        lastTouch = y;
-        const max = el.scrollHeight - el.clientHeight;
-        if (max <= 0) return;
-        target = Math.max(0, Math.min(max, target + dy));
-        if (!raf) raf = requestAnimationFrame(loop);
-      },
-      { passive: true }
-    );
-  }
-  function tryAttach() {
-    const el = document.getElementById("settings-scroll");
-    if (el) {
-      attach(el);
-      return true;
-    }
-    return false;
-  }
-  if (!tryAttach()) {
-    const obs = new MutationObserver(function () {
-      if (tryAttach()) obs.disconnect();
-    });
-    if (document.body) {
-      obs.observe(document.body, { childList: true, subtree: true });
-    } else {
-      document.addEventListener("DOMContentLoaded", function () {
-        if (!tryAttach()) obs.observe(document.body, { childList: true, subtree: true });
-      });
-    }
-  }
-})();
