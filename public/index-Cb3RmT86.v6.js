@@ -37992,7 +37992,8 @@ class tI {
     nt(this, "earthScrollProgress", 0);
     nt(this, "earthOverlay", null);
     nt(this, "earthHeadline", null);
-    nt(this, "earthBody", null);
+    nt(this, "earthProgressBar", null);
+    nt(this, "earthScrollHint", null);
     nt(this, "targetMode", "wheat");
     nt(this, "bladeTexture");
     nt(this, "maxInstances", 2.9e5);
@@ -38013,14 +38014,7 @@ class tI {
       ((this.pointer.x = (e.clientX / window.innerWidth) * 2 - 1),
         (this.pointer.y = -(e.clientY / window.innerHeight) * 2 + 1));
     });
-    nt(this, "onWheel", (e) => {
-      if (this.targetMode === "earth" && this.earthGrowth > 0.01) {
-        this.earthScrollTarget = Math.max(
-          0,
-          Math.min(1, this.earthScrollTarget + e.deltaY * 0.0007),
-        );
-      }
-    });
+    nt(this, "onWheel", () => {});
     nt(this, "onResize", () => {
       if (!this.container) return;
       const e = this.container.clientWidth,
@@ -38144,36 +38138,22 @@ class tI {
             this.floraCenterMesh.rotation.x = -Math.min(headTilt, 1.5);
         }
       }
-      // jelly-smooth lerp of scroll progress toward target
       if (this.targetMode === "earth") {
         this.earthScrollProgress +=
-          (this.earthScrollTarget - this.earthScrollProgress) * 0.12;
+          (this.earthScrollTarget - this.earthScrollProgress) * 0.14;
       } else {
         this.earthScrollProgress +=
-          (0 - this.earthScrollProgress) * 0.15;
+          (0 - this.earthScrollProgress) * 0.18;
         this.earthScrollTarget = 0;
       }
       const _p = this.earthScrollProgress;
-      // earth shrinks during the first 45% of scroll
-      this.earthScrollScale = Math.max(0, 1 - _p / 0.45);
-      // headline reveal: 0.05 -> 0.40
+      this.earthScrollScale = Math.max(0, 1 - _p / 0.18);
       if (this.earthHeadline) {
         const _msg = "earth is a small garden";
-        const _hr = Math.max(0, Math.min(1, (_p - 0.05) / 0.35));
+        const _hr = Math.max(0, Math.min(1, (_p - 0.005) / 0.09));
         const _hn = Math.floor(_hr * _msg.length);
         this.earthHeadline.textContent = _msg.slice(0, _hn);
         this.earthHeadline.style.opacity = String(Math.min(1, _hr * 2));
-      }
-      // body reveal: 0.50 -> 0.95 (sustainable agriculture copy)
-      if (this.earthBody) {
-        const _body =
-          "Sustainable agriculture isn't a return to the past — it's how a small garden becomes the future. Compost. Rotate. Polyculture. Patience.";
-        const _br = Math.max(0, Math.min(1, (_p - 0.5) / 0.45));
-        const _bn = Math.floor(_br * _body.length);
-        this.earthBody.textContent = _body.slice(0, _bn);
-        const _bo = Math.min(1, _br * 3);
-        this.earthBody.style.opacity = String(_bo);
-        this.earthBody.style.transform = `translateY(${(1 - _bo) * 16}px)`;
       }
       if (this.earthMesh) {
         const eSmooth =
@@ -38310,52 +38290,109 @@ class tI {
       window.addEventListener("wheel", this.onWheel, { passive: true }),
       (() => {
         const _o = document.createElement("div");
-        _o.id = "earth-small-garden-text";
+        _o.id = "earth-scroll-container";
         Object.assign(_o.style, {
           position: "fixed",
           inset: "0",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "28px",
-          padding: "24px",
+          overflowY: "auto",
+          overflowX: "hidden",
+          zIndex: "12",
           pointerEvents: "none",
-          zIndex: "10",
-          textAlign: "center",
+          opacity: "0",
+          transition: "opacity 0.6s ease",
           fontFamily: '"Google Sans", sans-serif',
-          color: "#4ade80",
+          color: "#1a1a1a",
+          background: "transparent",
         });
-        const _h = document.createElement("div");
-        _h.id = "earth-headline";
-        Object.assign(_h.style, {
-          fontSize: "clamp(2rem,7vw,6rem)",
-          fontWeight: "900",
-          letterSpacing: "0.01em",
-          lineHeight: "1",
-          whiteSpace: "nowrap",
-          textShadow:
-            "0 4px 14px rgba(0,0,0,0.18), 0 0 18px rgba(74,222,128,0.35)",
-          opacity: "0",
-        });
-        const _b = document.createElement("div");
-        _b.id = "earth-body";
-        Object.assign(_b.style, {
-          fontSize: "clamp(1rem,2vw,1.5rem)",
-          fontWeight: "400",
-          lineHeight: "1.55",
-          maxWidth: "60ch",
-          opacity: "0",
-          transform: "translateY(16px)",
-          transition: "opacity 0.25s ease, transform 0.25s ease",
-          textShadow: "0 2px 8px rgba(0,0,0,0.18)",
-        });
-        _o.appendChild(_h);
-        _o.appendChild(_b);
+        const _style = document.createElement("style");
+        _style.id = "earth-scroll-style";
+        _style.textContent = [
+          "#earth-scroll-container::-webkit-scrollbar { width: 6px; }",
+          "#earth-scroll-container::-webkit-scrollbar-track { background: transparent; }",
+          "#earth-scroll-container::-webkit-scrollbar-thumb { background: rgba(74,222,128,0.45); border-radius: 3px; }",
+          "#earth-scroll-container .esg-hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 24px; }",
+          "#earth-scroll-container .esg-hero h1 { font-size: clamp(2.25rem,7vw,6rem); font-weight: 900; color: #4ade80; text-shadow: 0 4px 14px rgba(0,0,0,0.18), 0 0 18px rgba(74,222,128,0.35); margin: 0; letter-spacing: 0.01em; line-height: 1; white-space: nowrap; }",
+          "#earth-scroll-container .esg-sub { margin-top: 22px; color: #555; letter-spacing: 0.22em; text-transform: uppercase; font-size: clamp(0.7rem,1vw,0.85rem); opacity: 0.7; }",
+          "#earth-scroll-container .esg-section { max-width: 760px; margin: 0 auto; padding: 18vh 7vw; opacity: 0; transform: translateY(48px) scale(0.985); transition: opacity 1s cubic-bezier(0.16,1,0.3,1), transform 1s cubic-bezier(0.16,1,0.3,1); position: relative; }",
+          "#earth-scroll-container .esg-section.visible { opacity: 1; transform: translateY(0) scale(1); }",
+          "#earth-scroll-container .esg-section h2 { font-size: clamp(1.5rem,3vw,2.6rem); font-weight: 800; color: #15803d; margin: 0 0 22px; letter-spacing: -0.01em; }",
+          "#earth-scroll-container .esg-section h3 { font-size: clamp(1.25rem,2.4vw,2rem); font-weight: 700; color: #15803d; margin: 0 0 18px; letter-spacing: -0.01em; }",
+          "#earth-scroll-container .esg-section p { font-size: clamp(1rem,1.4vw,1.18rem); line-height: 1.75; color: #2a2a2a; margin: 0 0 16px; }",
+          "#earth-scroll-container .esg-section ul { padding: 0; margin: 0; list-style: none; }",
+          "#earth-scroll-container .esg-section li { font-size: clamp(1rem,1.4vw,1.18rem); line-height: 1.7; color: #2a2a2a; margin-bottom: 12px; padding-left: 28px; position: relative; }",
+          "#earth-scroll-container .esg-section li::before { content: ''; position: absolute; left: 0; top: 0.75em; width: 14px; height: 2px; background: #4ade80; }",
+          "#earth-scroll-container .esg-num { font-family: \"Dancing Script\", cursive; font-size: clamp(4rem,8vw,7rem); color: rgba(21,128,61,0.18); line-height: 0.8; display: block; margin-bottom: 6px; font-weight: 700; pointer-events: none; }",
+          "#earth-scroll-container .esg-end { padding: 22vh 24px 16vh; text-align: center; color: #15803d; font-style: italic; font-size: clamp(1.1rem,2vw,1.5rem); opacity: 0; transform: translateY(48px); transition: opacity 1s cubic-bezier(0.16,1,0.3,1), transform 1s cubic-bezier(0.16,1,0.3,1); }",
+          "#earth-scroll-container .esg-end.visible { opacity: 1; transform: translateY(0); }",
+          ".esg-progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, #4ade80, #15803d); width: 0%; z-index: 13; box-shadow: 0 0 12px rgba(74,222,128,0.6); pointer-events: none; transition: width 0.08s linear; }",
+          ".esg-down-hint { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); color: #15803d; font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; opacity: 0.6; z-index: 13; pointer-events: none; animation: esgBounce 2.4s ease-in-out infinite; }",
+          "@keyframes esgBounce { 0%,100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 6px); } }",
+        ].join("\n");
+        document.head.appendChild(_style);
+        _o.innerHTML = [
+          '<div class="esg-hero">',
+          '  <h1 id="esg-headline"></h1>',
+          '  <p class="esg-sub">about smalgardn &mdash; scroll to read</p>',
+          "</div>",
+          '<section class="esg-section">',
+          "  <h2>About smalgardn</h2>",
+          "  <p>The term &ldquo;sustainable agriculture&rdquo; means an integrated system of plant and animal production practices that, over the long term:</p>",
+          "  <ul>",
+          "    <li>Satisfies human food and fiber needs</li>",
+          "    <li>Enhances environmental quality and natural resources</li>",
+          "    <li>Uses nonrenewable and on-farm resources efficiently</li>",
+          "    <li>Supports the economic viability of farm operations</li>",
+          "    <li>Improves the quality of life for farmers and society as a whole</li>",
+          "  </ul>",
+          "</section>",
+          '<section class="esg-section">',
+          "  <h2>Our Purpose</h2>",
+          "  <p>smalgardn exists to make sustainable agriculture more visible, personal, and understandable.</p>",
+          "  <p>We believe the Earth is a small garden: limited, shared, and dependent on care. Through projects about climate-threatened crops, food systems, biodiversity, and small-scale growing, we help people see how agriculture connects to everyday life.</p>",
+          "  <p>Our goal is to show that sustainable agriculture is not only about farming. It is about protecting the future of food, nature, and society.</p>",
+          "</section>",
+          '<section class="esg-section"><span class="esg-num">01</span><h3>Protect environmental health</h3><p>Agriculture depends on healthy soil, clean water, stable climates, and biodiversity. One of our goals is to raise awareness about how farming practices can either damage or restore natural systems.</p><p>We aim to promote practices and ideas that reduce waste, conserve water, protect soil fertility, and lower environmental pressure.</p></section>',
+          '<section class="esg-section"><span class="esg-num">02</span><h3>Support climate-resilient food systems</h3><p>Many crops are becoming harder to grow in their traditional regions because of rising temperatures, shifting rainfall, and extreme weather. smalgardn highlights these climate-threatened crops and asks how food systems can adapt before these changes become irreversible.</p><p>This includes exploring crops that may lose suitable growing regions, crops that may find new niches, and communities that may be affected by those shifts.</p></section>',
+          '<section class="esg-section"><span class="esg-num">03</span><h3>Make agriculture personal and accessible</h3><p>Sustainable agriculture often feels distant from everyday life. We want to change that.</p><p>Through small-scale gardening, public education, and storytelling, smalgardn connects agriculture to daily choices: what we eat, what we waste, what we grow, and what we choose to value.</p></section>',
+          '<section class="esg-section"><span class="esg-num">04</span><h3>Reduce resource waste</h3><p>Water, soil nutrients, energy, and land are limited. A sustainable food system must use these resources carefully.</p><p>One part of our project focuses on helping people visualize agricultural waste, especially water waste, so that invisible resource use becomes easier to understand.</p></section>',
+          '<section class="esg-section"><span class="esg-num">05</span><h3>Protect biodiversity and disappearing crops</h3><p>Food diversity is part of ecological and cultural resilience. When certain crops become harder to grow, we do not only lose ingredients &mdash; we lose flavors, traditions, farming knowledge, and genetic diversity.</p><p>smalgardn uses rare, climate-threatened, or regionally vulnerable crops as a way to start conversations about biodiversity and environmental change.</p></section>',
+          '<section class="esg-section"><span class="esg-num">06</span><h3>Connect sustainability with social equity</h3><p>Sustainable agriculture must also consider people. Farmers, consumers, and future generations are all part of the system.</p><p>We believe sustainable agriculture should support fair access to food, respect farming communities, and help future generations inherit a food system that is healthier than the one we have today.</p></section>',
+          '<div class="esg-end"><p>the earth is small. tend it carefully.</p></div>',
+        ].join("");
         document.body.appendChild(_o);
+        const _bar = document.createElement("div");
+        _bar.className = "esg-progress";
+        _bar.style.display = "none";
+        document.body.appendChild(_bar);
+        const _hint = document.createElement("div");
+        _hint.className = "esg-down-hint";
+        _hint.textContent = "scroll";
+        _hint.style.display = "none";
+        document.body.appendChild(_hint);
         this.earthOverlay = _o;
-        this.earthHeadline = _h;
-        this.earthBody = _b;
+        this.earthHeadline = _o.querySelector("#esg-headline");
+        this.earthProgressBar = _bar;
+        this.earthScrollHint = _hint;
+        const _io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((en) => {
+              if (en.isIntersecting) en.target.classList.add("visible");
+            });
+          },
+          { root: _o, threshold: 0.15, rootMargin: "0px 0px -8% 0px" },
+        );
+        _o.querySelectorAll(".esg-section, .esg-end").forEach((el) =>
+          _io.observe(el),
+        );
+        _o.addEventListener("scroll", () => {
+          const max = _o.scrollHeight - _o.clientHeight;
+          if (max <= 0) return;
+          const t = _o.scrollTop / max;
+          this.earthScrollTarget = Math.max(0, Math.min(1, t));
+          _bar.style.width = (t * 100).toFixed(2) + "%";
+          if (t > 0.02) _hint.style.opacity = "0";
+          else _hint.style.opacity = "0.6";
+        });
       })(),
       this.animate());
   }
@@ -39039,10 +39076,26 @@ class tI {
       this.earthHeadline.textContent = "";
       this.earthHeadline.style.opacity = "0";
     }
-    if (this.earthBody) {
-      this.earthBody.textContent = "";
-      this.earthBody.style.opacity = "0";
-      this.earthBody.style.transform = "translateY(16px)";
+    if (this.earthOverlay) {
+      const _isEarth = this.targetMode === "earth";
+      this.earthOverlay.style.pointerEvents = _isEarth ? "auto" : "none";
+      this.earthOverlay.style.opacity = _isEarth ? "1" : "0";
+      this.earthOverlay.scrollTop = 0;
+      if (!_isEarth) {
+        this.earthOverlay
+          .querySelectorAll(".esg-section.visible, .esg-end.visible")
+          .forEach((el) => el.classList.remove("visible"));
+      }
+    }
+    if (this.earthProgressBar) {
+      this.earthProgressBar.style.display =
+        this.targetMode === "earth" ? "block" : "none";
+      this.earthProgressBar.style.width = "0%";
+    }
+    if (this.earthScrollHint) {
+      this.earthScrollHint.style.display =
+        this.targetMode === "earth" ? "block" : "none";
+      this.earthScrollHint.style.opacity = "0.6";
     }
   }
   updateUniforms(e) {
@@ -39090,6 +39143,18 @@ class tI {
       this.earthOverlay &&
         this.earthOverlay.parentNode &&
         this.earthOverlay.parentNode.removeChild(this.earthOverlay),
+      this.earthProgressBar &&
+        this.earthProgressBar.parentNode &&
+        this.earthProgressBar.parentNode.removeChild(this.earthProgressBar),
+      this.earthScrollHint &&
+        this.earthScrollHint.parentNode &&
+        this.earthScrollHint.parentNode.removeChild(this.earthScrollHint),
+      document.getElementById("earth-scroll-style") &&
+        document
+          .getElementById("earth-scroll-style")
+          .parentNode.removeChild(
+            document.getElementById("earth-scroll-style"),
+          ),
       this.resizeObserver.disconnect(),
       this.frameId && cancelAnimationFrame(this.frameId),
       this.scene.traverse((e) => {
